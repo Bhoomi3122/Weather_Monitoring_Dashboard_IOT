@@ -1,9 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const port = 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Sample historical data (can be updated later to push real-time entries)
 const sampleData = [
@@ -14,8 +16,8 @@ const sampleData = [
 ];
 
 // Optional: Push real-time data into this array
-app.post("/api/data", (req, res) => {
-  const { temperature, humidity } = req.body;
+app.get("/api/data", (req, res) => {
+  const { temperature, humidity } = req.query;
   const timestamp = new Date().toISOString();
   const newEntry = { timestamp, temperature, humidity };
   sampleData.push(newEntry);
@@ -28,4 +30,11 @@ app.get("/api/data", (req, res) => {
   res.json(sampleData);
 });
 
-app.listen(3001, () => console.log("Backend running on port 3001"));
+// Provide latest data to frontend
+app.get('/data', (req, res) => {
+    res.json(latestData);
+});
+
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+});
