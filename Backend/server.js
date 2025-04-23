@@ -26,7 +26,7 @@ app.get("/api/data", (req, res) => {
 });
 
 // Send the whole sampleData array
-app.get("/api/data", (req, res) => {
+app.get("/api/alldata", (req, res) => {
   res.json(sampleData);
 });
 
