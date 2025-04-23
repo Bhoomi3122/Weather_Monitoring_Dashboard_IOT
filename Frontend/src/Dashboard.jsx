@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
-import { Sun, Droplet, Info, X, ArrowUpCircle, ArrowDownCircle, Minus, Navigation, Thermometer } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
+import { Sun, Droplet, Info, X, ArrowUpCircle, ArrowDownCircle, Minus, Navigation, Thermometer, Activity } from 'lucide-react';
+
 
 // Sample data - in a real app this would be loaded from data.json
 const sampleData = [
@@ -10,6 +11,106 @@ const sampleData = [
   { timestamp: "2025-04-22T11:00:00", temperature: 30, humidity: 38 },
   { timestamp: "2025-04-22T12:00:00", temperature: 34, humidity: 36 }
 ];
+
+// Add custom semi-donut chart component
+const AnimatedSemiDonut = ({ value, maxValue, type, size = 120, strokeWidth = 12, duration = 1.5 }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * Math.PI;
+  
+  // Calculate colors based on type and value
+  const getColor = () => {
+    if (type === 'temperature') {
+      if (value < 28) return "#3b82f6"; // blue
+      if (value > 32) return "#ef4444"; // red
+      return "#f59e0b"; // yellow
+    } else if (type === 'humidity') {
+      if (value < 30) return "#d1d5db"; // gray
+      if (value > 60) return "#3b82f6"; // blue
+      return "#60a5fa"; // light blue
+    }
+    return "#3b82f6"; // default blue
+  };
+
+  // Calculate the percentage filled and stroke-dashoffset
+  const percentage = Math.min(Math.max(value, 0), maxValue) / maxValue;
+  const strokeDashoffset = circumference - (circumference * percentage);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDisplayValue(value);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDisplayValue(prev => {
+        const diff = value - prev;
+        if (Math.abs(diff) < 0.1) {
+          clearInterval(interval);
+          return value;
+        }
+        return prev + (diff * 0.1);
+      });
+    }, 20);
+    
+    return () => clearInterval(interval);
+  }, [value]);
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size / 2 + 10 }}>
+      <svg width={size} height={size / 2 + 100} viewBox={`0 0 ${size} ${size / 2 + 10}`}>
+        {/* Background arc - always a semicircle */}
+        <path
+          d={`M ${strokeWidth/2}, ${size/2} 
+              a ${radius} ${radius} 0 0 1 ${radius*2} 0`}
+          fill="none"
+          stroke="#e5e7eb"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+        />
+        
+        {/* Foreground arc - animated */}
+        <motion.path
+          d={`M ${strokeWidth/2}, ${size/2} 
+              a ${radius} ${radius} 0 0 1 ${radius*2} 0`}
+          fill="none"
+          stroke={getColor()}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          initial={{ strokeDasharray: circumference, strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset }}
+          transition={{ duration, ease: "easeOut" }}
+        />
+        
+        {/* Value text */}
+        <text
+          x={size / 2}
+          y={size / 2 - 5}
+          textAnchor="middle"
+          fontSize={size / 5}
+          fontWeight="bold"
+          fill={getColor()}
+        >
+          {Math.round(displayValue * 10) / 10}{type === 'temperature' ? '°C' : '%'}
+        </text>
+        
+        {/* Label text */}
+        <text
+          x={size / 2}
+          y={size / 2 + size / 7}
+          textAnchor="middle"
+          fontSize={size / 10}
+          fill="#6b7280"
+        >
+          {type === 'temperature' ? 'Temperature' : 'Humidity'}
+        </text>
+      </svg>
+    </div>
+  );
+};
 
 export default function WeatherDashboard() {
   const [data, setData] = useState(sampleData);
@@ -26,6 +127,8 @@ export default function WeatherDashboard() {
   const humidityCardRef = useRef(null);
   const chartsRef = useRef(null);
   const comparisonRef = useRef(null);
+  const gaugesRef = useRef(null);
+  
 
   useEffect(() => {
     // Simulate loading data
@@ -68,6 +171,7 @@ export default function WeatherDashboard() {
     return () => clearInterval(interval);
   }, []);
 
+   
   const tourSteps = [
     { 
       target: navbarRef, 
@@ -78,6 +182,11 @@ export default function WeatherDashboard() {
       target: currentReadingsRef, 
       title: 'Current Readings', 
       description: 'This section displays the latest temperature and humidity readings for quick reference'
+    },
+    { 
+      target: gaugesRef, 
+      title: 'Visual Gauges',
+      description: 'These animated semi-donut gauges provide a visual representation of current temperature and humidity levels'
     },
     { 
       target: temperatureCardRef, 
@@ -97,7 +206,7 @@ export default function WeatherDashboard() {
     { 
       target: comparisonRef, 
       title: 'Data Comparison', 
-      description: 'Compare current readings with previous values to see how conditions are changing'
+      description: 'Compare current readings with previous values to see how conditions are changing through various chart types'
     }
   ];
 
@@ -351,7 +460,50 @@ export default function WeatherDashboard() {
             Monitor temperature and humidity data collected from your Arduino sensors
           </p>
         </motion.div>
-
+        {/* NEW SECTION - Gauge Section */}
+<section ref={gaugesRef} className="mb-8">
+  <h3 className={`text-lg font-medium ${textColor} mb-4`}>Visual Gauges</h3>
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+    className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
+  >
+    <div className="flex flex-col md:flex-row justify-center items-center gap-28">
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        <AnimatedSemiDonut 
+          value={currentReadings.temperature} 
+          maxValue={50} 
+          type="temperature"
+          size={200}
+          strokeWidth={18}
+        />
+      </motion.div>
+      
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.6, duration: 0.5 }}
+      >
+        <AnimatedSemiDonut 
+          value={currentReadings.humidity} 
+          maxValue={100} 
+          type="humidity"
+          size={200}
+          strokeWidth={18}
+        />
+      </motion.div>
+    </div>
+    
+    <div className="text-center mt-6 text-sm text-gray-500">
+      Last updated: {formatTime(currentReadings.timestamp)}
+    </div>
+  </motion.div>
+</section>
         {/* Current Readings Section */}
         <section ref={currentReadingsRef} className="mb-8">
           <h3 className={`text-lg font-medium ${textColor} mb-4`}>Current Readings</h3>
@@ -455,71 +607,91 @@ export default function WeatherDashboard() {
         <section ref={chartsRef} className="mb-8">
           <h3 className={`text-lg font-medium ${textColor} mb-4`}>Historical Trends</h3>
           <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div className="h-64 mb-8">
-              <h4 className="text-gray-600 mb-3">Temperature Trend</h4>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={data}
-                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="timestamp" 
-                    tickFormatter={formatTime} 
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis 
-                    domain={['dataMin - 1', 'dataMax + 1']} 
-                    tick={{ fontSize: 12 }}
-                    label={{ value: '°C', angle: -90, position: 'insideLeft', fontSize: 12 }}
-                  />
-                  <Tooltip 
-                    formatter={(value) => [`${value}°C`, 'Temperature']}
-                    labelFormatter={(label) => `Time: ${formatTime(label)}`}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="temperature" 
-                    stroke="#f59e0b" 
-                    fill="#fef3c7" 
-                    animationDuration={500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          <div className="h-64 mb-8">
+  <h4 className="text-gray-600 mb-3">Temperature Trend</h4>
+  <ResponsiveContainer width="100%" height="100%">
+    <AreaChart
+      data={data}
+      margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+    >
+      <defs>
+        <linearGradient id="tempColorGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+          <stop offset="95%" stopColor="#fef3c7" stopOpacity={0.2}/>
+        </linearGradient>
+      </defs>
+      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+      <XAxis 
+        dataKey="timestamp" 
+        tickFormatter={formatTime} 
+        tick={{ fontSize: 12 }}
+        stroke="#9ca3af"
+      />
+      <YAxis 
+        domain={['dataMin - 1', 'dataMax + 1']} 
+        tick={{ fontSize: 12 }}
+        label={{ value: '°C', angle: -90, position: 'insideLeft', fontSize: 12 }}
+        stroke="#9ca3af"
+      />
+      <Tooltip 
+        formatter={(value) => [`${value}°C`, 'Temperature']}
+        labelFormatter={(label) => `Time: ${formatTime(label)}`}
+        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+      />
+      <Area 
+        type="monotone" 
+        dataKey="temperature" 
+        stroke="#f59e0b" 
+        fill="url(#tempColorGradient)" 
+        animationDuration={1000}
+        strokeWidth={2}
+      />
+    </AreaChart>
+  </ResponsiveContainer>
+</div>
             
-            <div className="h-64">
-              <h4 className="text-gray-600 mb-3">Humidity Trend</h4>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart 
-                  data={data}
-                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="timestamp" 
-                    tickFormatter={formatTime}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis 
-                    domain={[0, 100]} 
-                    tick={{ fontSize: 12 }}
-                    label={{ value: '%', angle: -90, position: 'insideLeft', fontSize: 12 }}
-                  />
-                  <Tooltip 
-                    formatter={(value) => [`${value}%`, 'Humidity']}
-                    labelFormatter={(label) => `Time: ${formatTime(label)}`}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="humidity" 
-                    stroke="#3b82f6" 
-                    fill="#dbeafe" 
-                    animationDuration={500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+<div className="h-64">
+  <h4 className="text-gray-600 mb-3">Humidity Trend</h4>
+  <ResponsiveContainer width="100%" height="100%">
+    <AreaChart 
+      data={data}
+      margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+    >
+      <defs>
+        <linearGradient id="humidityColorGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+          <stop offset="95%" stopColor="#dbeafe" stopOpacity={0.2}/>
+        </linearGradient>
+      </defs>
+      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+      <XAxis 
+        dataKey="timestamp" 
+        tickFormatter={formatTime}
+        tick={{ fontSize: 12 }}
+        stroke="#9ca3af"
+      />
+      <YAxis 
+        domain={[0, 100]} 
+        tick={{ fontSize: 12 }}
+        label={{ value: '%', angle: -90, position: 'insideLeft', fontSize: 12 }}
+        stroke="#9ca3af"
+      />
+      <Tooltip 
+        formatter={(value) => [`${value}%`, 'Humidity']}
+        labelFormatter={(label) => `Time: ${formatTime(label)}`}
+        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+      />
+      <Area 
+        type="monotone" 
+        dataKey="humidity" 
+        stroke="#3b82f6" 
+        fill="url(#humidityColorGradient)" 
+        animationDuration={1000}
+        strokeWidth={2}
+      />
+    </AreaChart>
+  </ResponsiveContainer>
+</div>
           </div>
         </section>
 
@@ -538,49 +710,130 @@ export default function WeatherDashboard() {
               transition={{ duration: 0.5 }}
               className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
             >
-              <div className="mb-6">
-                <div className="flex justify-between text-sm font-medium text-gray-500 mb-2">
-                  <span>Current ({formatTime(currentReadings.timestamp)})</span>
-                  <span>Previous ({formatTime(previousReadings.timestamp)})</span>
-                </div>
-              </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[
-                      {
-                        name: 'Temperature (°C)',
-                        current: currentReadings.temperature,
-                        previous: previousReadings.temperature
-                      },
-                      {
-                        name: 'Humidity (%)',
-                        current: currentReadings.humidity,
-                        previous: previousReadings.humidity
-                      }
-                    ]}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar 
-                      dataKey="current" 
-                      name="Current" 
-                      fill="#3b82f6" 
-                      animationDuration={500} 
-                    />
-                    <Bar 
-                      dataKey="previous" 
-                      name="Previous" 
-                      fill="#93c5fd" 
-                      animationDuration={500} 
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+  {/* Bar Chart */}
+  <div className="h-64">
+    <h4 className="text-gray-600 mb-3 text-center">Bar Comparison</h4>
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={[
+          {
+            name: 'Temperature (°C)',
+            current: currentReadings.temperature,
+            previous: previousReadings.temperature
+          },
+          {
+            name: 'Humidity (%)',
+            current: currentReadings.humidity,
+            previous: previousReadings.humidity
+          }
+        ]}
+        margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+        <YAxis />
+        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+        <Legend />
+        <Bar 
+          dataKey="current" 
+          name="Current" 
+          fill="#3b82f6" 
+          animationDuration={1000} 
+          radius={[4, 4, 0, 0]}
+        />
+        <Bar 
+          dataKey="previous" 
+          name="Previous" 
+          fill="#93c5fd" 
+          animationDuration={1000} 
+          radius={[4, 4, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+
+  {/* Radar Chart - New */}
+  {/* Pie Chart - Replacing Radar View */}
+<div className="h-64">
+  <h4 className="text-gray-600 mb-3 text-center">Comparison View</h4>
+  <ResponsiveContainer width="100%" height="100%">
+    <PieChart>
+    <Pie
+  data={[
+    { name: 'Current Temp', value: currentReadings.temperature, type: 'current' },
+    { name: 'Previous Temp', value: previousReadings.temperature, type: 'previous' },
+    { name: 'Current Humidity', value: currentReadings.humidity, type: 'currentH' },
+    { name: 'Previous Humidity', value: previousReadings.humidity, type: 'previousH' }
+  ]}
+  cx="50%"
+  cy="50%"
+  innerRadius={60}
+  outerRadius={80}
+  paddingAngle={2}
+  dataKey="value"
+  nameKey="name"
+  animationDuration={1000}
+>
+  <Cell fill="#2563EB" />
+  <Cell fill="#1E40AF" />
+  <Cell fill="#10B981" />
+  <Cell fill="#047857" />
+</Pie>
+
+      <Legend layout="vertical" verticalAlign="middle" align="right" />
+      <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
+    </PieChart>
+  </ResponsiveContainer>
+</div>
+</div>
+
+{/* Activity Timeline - New */}
+<div className="mt-12">
+  <h4 className="text-gray-600 mb-3 flex items-center">
+    <Activity size={16} className="mr-2" />
+    Recent Activity Timeline
+  </h4>
+  <div className="relative">
+    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+    
+    <div className="ml-6 relative pb-4">
+      <div className="absolute -left-6 mt-1.5 w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></div>
+      <div className="bg-blue-50 rounded-lg p-3">
+        <div className="text-sm font-medium text-blue-600">Current Reading</div>
+        <div className="text-xs text-gray-500 mb-1">{formatTime(currentReadings.timestamp)}</div>
+        <div className="flex gap-4 text-sm">
+          <div className="flex items-center">
+            <Thermometer size={14} className="mr-1 text-red-500" />
+            <span>{currentReadings.temperature}°C</span>
+          </div>
+          <div className="flex items-center">
+            <Droplet size={14} className="mr-1 text-blue-500" />
+            <span>{currentReadings.humidity}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div className="ml-6 relative">
+      <div className="absolute -left-6 mt-1.5 w-3 h-3 rounded-full bg-gray-400 border-2 border-white"></div>
+      <div className="bg-gray-50 rounded-lg p-3">
+        <div className="text-sm font-medium text-gray-600">Previous Reading</div>
+        <div className="text-xs text-gray-500 mb-1">{formatTime(previousReadings.timestamp)}</div>
+        <div className="flex gap-4 text-sm">
+          <div className="flex items-center">
+            <Thermometer size={14} className="mr-1 text-red-500" />
+            <span>{previousReadings.temperature}°C</span>
+          </div>
+          <div className="flex items-center">
+            <Droplet size={14} className="mr-1 text-blue-500" />
+            <span>{previousReadings.humidity}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
             </motion.div>
           </section>
         )}
