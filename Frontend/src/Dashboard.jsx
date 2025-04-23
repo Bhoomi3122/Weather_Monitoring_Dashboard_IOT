@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { Sun, Droplet, Info, X, ArrowUpCircle, ArrowDownCircle, Minus, Navigation, Thermometer, Activity } from 'lucide-react';
-
+import SendEmail from "./sendEmail"; 
 
 // Sample data - in a real app this would be loaded from data.json
 const sampleData = [
@@ -172,7 +172,7 @@ export default function WeatherDashboard() {
   }, []);
 
    
- const tourSteps = [
+  const tourSteps = [
     { 
       target: navbarRef, 
       title: 'Welcome to WeatherVerse', 
@@ -182,6 +182,11 @@ export default function WeatherDashboard() {
       target: currentReadingsRef, 
       title: 'Current Readings', 
       description: 'This section displays the latest temperature and humidity readings for quick reference'
+    },
+    { 
+      target: gaugesRef, 
+      title: 'Visual Gauges',
+      description: 'These animated semi-donut gauges provide a visual representation of current temperature and humidity levels'
     },
     { 
       target: temperatureCardRef, 
@@ -201,10 +206,9 @@ export default function WeatherDashboard() {
     { 
       target: comparisonRef, 
       title: 'Data Comparison', 
-      description: 'Compare current readings with previous values to see how conditions are changing'
+      description: 'Compare current readings with previous values to see how conditions are changing through various chart types'
     }
   ];
-
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -283,13 +287,10 @@ export default function WeatherDashboard() {
   // Function to calculate the tour overlay position with improved accuracy
  // Function to calculate the tour overlay position - simplified
 // Simplified position function
-// Function to calculate the tour overlay position with improved accuracy
 const getTourOverlayPosition = (step) => {
-  if (!tourSteps[step] || !tourSteps[step].target || !tourSteps[step].target.current) return {};
+  if (!tourSteps[step] || !tourSteps[step].target.current) return {};
   
   const element = tourSteps[step].target.current;
-  if (!element) return {};
-  
   const rect = element.getBoundingClientRect();
   
   return {
@@ -300,14 +301,12 @@ const getTourOverlayPosition = (step) => {
   };
 };
 
-// Improved scroll to target function
+// Simplified scroll function
 const scrollToTarget = () => {
-  if (!tourSteps[tourStep] || !tourSteps[tourStep].target || !tourSteps[tourStep].target.current) return;
+  if (!tourSteps[tourStep] || !tourSteps[tourStep].target.current) return;
   
   const element = tourSteps[tourStep].target.current;
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
 // Effect for scrolling
@@ -501,6 +500,10 @@ useEffect(() => {
           strokeWidth={18}
         />
       </motion.div>
+      <SendEmail
+            temperature={currentReadings.temperature}
+            humidity={currentReadings.humidity}
+          />
     </div>
     
     <div className="text-center mt-6 text-sm text-gray-500">
