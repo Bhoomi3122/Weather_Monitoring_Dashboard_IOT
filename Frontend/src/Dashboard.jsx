@@ -140,9 +140,13 @@ export default function WeatherDashboard() {
             return newData;
           });
           
-          // Update current and previous readings
-          setPreviousReadings(currentReadings);
+          // Update current readings
           setCurrentReadings(latestData);
+          
+          // Store the previous reading correctly
+          if (currentReadings) {
+            setPreviousReadings(currentReadings);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -157,7 +161,7 @@ export default function WeatherDashboard() {
   
     // Clean up interval on component unmount
     return () => clearInterval(interval);
-  }, [currentReadings]);
+  }, []); // Remove the dependency on currentReadings
   useEffect(() => {
     // Simulate loading data
     const lastReading = data[data.length - 1];
@@ -761,12 +765,12 @@ useEffect(() => {
           {
             name: 'Temperature (°C)',
             current: currentReadings.temperature,
-            previous: previousReadings.temperature
+            previous:  previousReadings ? previousReadings.temperature : currentReadings
           },
           {
             name: 'Humidity (%)',
             current: currentReadings.humidity,
-            previous: previousReadings.humidity
+            previous:  previousReadings ? previousReadings.humidity : currentReadings
           }
         ]}
         margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
