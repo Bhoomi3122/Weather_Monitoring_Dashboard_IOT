@@ -172,7 +172,7 @@ export default function WeatherDashboard() {
   }, []);
 
    
-  const tourSteps = [
+ const tourSteps = [
     { 
       target: navbarRef, 
       title: 'Welcome to WeatherVerse', 
@@ -182,11 +182,6 @@ export default function WeatherDashboard() {
       target: currentReadingsRef, 
       title: 'Current Readings', 
       description: 'This section displays the latest temperature and humidity readings for quick reference'
-    },
-    { 
-      target: gaugesRef, 
-      title: 'Visual Gauges',
-      description: 'These animated semi-donut gauges provide a visual representation of current temperature and humidity levels'
     },
     { 
       target: temperatureCardRef, 
@@ -206,9 +201,10 @@ export default function WeatherDashboard() {
     { 
       target: comparisonRef, 
       title: 'Data Comparison', 
-      description: 'Compare current readings with previous values to see how conditions are changing through various chart types'
+      description: 'Compare current readings with previous values to see how conditions are changing'
     }
   ];
+
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -284,34 +280,42 @@ export default function WeatherDashboard() {
   };
 
   // Function to calculate the tour overlay position
-  const getTourOverlayPosition = (step) => {
-    if (!tourSteps[step] || !tourSteps[step].target.current) return {};
-    
-    const element = tourSteps[step].target.current;
-    const rect = element.getBoundingClientRect();
-    
-    return {
-      top: rect.top + window.scrollY,
-      left: rect.left + window.scrollX,
-      width: rect.width,
-      height: rect.height
-    };
+  // Function to calculate the tour overlay position with improved accuracy
+ // Function to calculate the tour overlay position - simplified
+// Simplified position function
+// Function to calculate the tour overlay position with improved accuracy
+const getTourOverlayPosition = (step) => {
+  if (!tourSteps[step] || !tourSteps[step].target || !tourSteps[step].target.current) return {};
+  
+  const element = tourSteps[step].target.current;
+  if (!element) return {};
+  
+  const rect = element.getBoundingClientRect();
+  
+  return {
+    top: rect.top + window.scrollY,
+    left: rect.left + window.scrollX,
+    width: rect.width,
+    height: rect.height
   };
+};
 
-  // Function to scroll to the target element
-  const scrollToTarget = () => {
-    if (!tourSteps[tourStep] || !tourSteps[tourStep].target.current) return;
-    
-    const element = tourSteps[tourStep].target.current;
+// Improved scroll to target function
+const scrollToTarget = () => {
+  if (!tourSteps[tourStep] || !tourSteps[tourStep].target || !tourSteps[tourStep].target.current) return;
+  
+  const element = tourSteps[tourStep].target.current;
+  if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
+  }
+};
 
-  // Scroll to target when tour step changes
-  useEffect(() => {
-    if (showTour) {
-      scrollToTarget();
-    }
-  }, [tourStep, showTour]);
+// Effect for scrolling
+useEffect(() => {
+  if (showTour) {
+    setTimeout(scrollToTarget, 100);
+  }
+}, [tourStep, showTour]);
 
   if (!currentReadings) {
     return (
@@ -840,97 +844,65 @@ export default function WeatherDashboard() {
       </main>
 
       {/* Tour Overlay - FIXED: Changed to use spotlight effect instead of dimming the whole screen */}
-      <AnimatePresence>
-        {showTour && (
-          <>
-            {/* Semi-transparent overlay with spotlight cutout */}
-            <div 
-              className="fixed inset-0 z-40 pointer-events-none"
-              style={{
-                background: 'rgba(0, 0, 0, 0.5)',
-                // The following creates a spotlight effect using multiple box-shadows
-                boxShadow: tourSteps[tourStep]?.target?.current ? 
-                  `inset 0 0 0 9999px rgba(0, 0, 0, 0.5)` : 'none'
-              }}
-            >
-              {/* This div creates the spotlight effect */}
-              {tourSteps[tourStep]?.target?.current && (
-                <div
-                  className="absolute bg-transparent"
-                  style={{
-                    top: getTourOverlayPosition(tourStep).top,
-                    left: getTourOverlayPosition(tourStep).left,
-                    width: getTourOverlayPosition(tourStep).width,
-                    height: getTourOverlayPosition(tourStep).height,
-                    boxShadow: `0 0 0 9999px rgba(0, 0, 0, 0.5)`,
-                    // This makes the cutout transparent
-                    backgroundColor: 'transparent'
-                  }}
-                />
-              )}
-            </div>
-                
-            {/* Highlighted border around current element */}
-            {tourSteps[tourStep]?.target?.current && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed z-50 border-2 border-blue-400 rounded-md pointer-events-none"
-                style={{
-                  top: getTourOverlayPosition(tourStep).top - 4,
-                  left: getTourOverlayPosition(tourStep).left - 4,
-                  width: getTourOverlayPosition(tourStep).width + 8,
-                  height: getTourOverlayPosition(tourStep).height + 8,
-                }}
-              />
-            )}
-            
-            {/* Tour dialog - repositioned for better visibility */}
-            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-4"
+      {/* Tour Overlay - Improved spotlight effect */}
+{/* Tour Overlay */}
+<AnimatePresence>
+  {/* Simple Tour Overlay */}
+{showTour && (
+  <>
+    {/* Highlight border only - no dimming */}
+    {tourSteps[tourStep]?.target?.current && (
+      <div
+        className="fixed z-50 border-4 border-blue-500 rounded-lg pointer-events-none"
+        style={{
+          top: getTourOverlayPosition(tourStep).top - 8,
+          left: getTourOverlayPosition(tourStep).left - 8,
+          width: getTourOverlayPosition(tourStep).width + 16,
+          height: getTourOverlayPosition(tourStep).height + 16
+        }}
+      />
+    )}
+    
+    {/* Fixed position tour card */}
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 max-w-lg w-full">
+      <div className="bg-white rounded-lg shadow-lg p-6 mx-4">
+        <button 
+          onClick={closeTour}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        >
+          <X size={24} />
+        </button>
+        <div className="mb-4 flex items-center">
+          <Info size={24} className="text-blue-500 mr-2" />
+          <h3 className="text-xl font-medium">{tourSteps[tourStep].title}</h3>
+        </div>
+        <p className="text-gray-600 mb-6">{tourSteps[tourStep].description}</p>
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-500">
+            Step {tourStep + 1} of {tourSteps.length}
+          </div>
+          <div className="flex">
+            {tourStep > 0 && (
+              <button
+                onClick={prevTourStep}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm mr-2"
               >
-                <button 
-                  onClick={closeTour}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-                >
-                  <X size={24} />
-                </button>
-                <div className="mb-4 flex items-center">
-                  <Info size={24} className="text-blue-500 mr-2" />
-                  <h3 className="text-xl font-medium">{tourSteps[tourStep].title}</h3>
-                </div>
-                <p className="text-gray-600 mb-6">{tourSteps[tourStep].description}</p>
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-500">
-                    Step {tourStep + 1} of {tourSteps.length}
-                  </div>
-                  <div className="flex">
-                    {tourStep > 0 && (
-                      <button
-                        onClick={prevTourStep}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm mr-2"
-                      >
-                        Previous
-                      </button>
-                    )}
-                    <button
-                      onClick={nextTourStep}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm"
-                    >
-                      {tourStep < tourSteps.length - 1 ? 'Next' : 'Finish'}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </>
-        )}
-      </AnimatePresence>
+                Previous
+              </button>
+            )}
+            <button
+              onClick={nextTourStep}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm"
+            >
+              {tourStep < tourSteps.length - 1 ? 'Next' : 'Finish'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </>
+)}
+</AnimatePresence>
     </div>
   );
 }
