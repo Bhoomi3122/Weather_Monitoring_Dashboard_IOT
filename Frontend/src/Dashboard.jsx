@@ -4,14 +4,6 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Sun, Droplet, Info, X, ArrowUpCircle, ArrowDownCircle, Minus, Navigation, Thermometer, Activity } from 'lucide-react';
 import SendEmail from "./sendEmail"; 
 
-// Sample data - in a real app this would be loaded from data.json
-const sampleData = [
-  { timestamp: "2025-04-22T09:00:00", temperature: 26, humidity: 40 },
-  { timestamp: "2025-04-22T10:00:00", temperature: 28, humidity: 42 },
-  { timestamp: "2025-04-22T11:00:00", temperature: 30, humidity: 38 },
-  { timestamp: "2025-04-22T12:00:00", temperature: 34, humidity: 36 }
-];
-
 // Add custom semi-donut chart component
 const AnimatedSemiDonut = ({ value, maxValue, type, size = 120, strokeWidth = 12, duration = 1.5 }) => {
   const [displayValue, setDisplayValue] = useState(0);
@@ -113,7 +105,7 @@ const AnimatedSemiDonut = ({ value, maxValue, type, size = 120, strokeWidth = 12
 };
 
 export default function WeatherDashboard() {
-  const [data, setData] = useState(sampleData);
+ 
   const [showTour, setShowTour] = useState(false);
   const [tourStep, setTourStep] = useState(0);
   const [currentReadings, setCurrentReadings] = useState(null);
@@ -128,8 +120,44 @@ export default function WeatherDashboard() {
   const chartsRef = useRef(null);
   const comparisonRef = useRef(null);
   const gaugesRef = useRef(null);
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    // Function to fetch real-time data from the backend
+    const fetchData = async () => {
+      try {
+        // Change this URL to match your backend endpoint
+        const response = await fetch("http://localhost:3000/api/latestdata");
+        const latestData = await response.json();
+        
+        if (latestData && latestData.temperature && latestData.humidity) {
+          // Update data array for charts
+          setData(prevData => {
+            const newData = [...prevData, latestData];
+            // Keep only the last 24 readings
+            if (newData.length > 24) {
+              return newData.slice(newData.length - 24);
+            }
+            return newData;
+          });
+          
+          // Update current and previous readings
+          setPreviousReadings(currentReadings);
+          setCurrentReadings(latestData);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
   
-
+    // Fetch data immediately when component mounts
+    fetchData();
+  
+    // Fetch data every second
+    const interval = setInterval(fetchData, 1000);
+  
+    // Clean up interval on component unmount
+    return () => clearInterval(interval);
+  }, [currentReadings]);
   useEffect(() => {
     // Simulate loading data
     const lastReading = data[data.length - 1];
@@ -221,12 +249,14 @@ export default function WeatherDashboard() {
   };
 
   const getTemperatureColor = (temp) => {
+    const temperature = parseFloat(temp);
     if (temp < 28) return 'text-blue-500';
     if (temp > 32) return 'text-red-500';
     return 'text-yellow-500';
   };
 
   const getTemperatureCardColor = (temp) => {
+    const temperature = parseFloat(temp);
     if (temp < 28) return 'bg-blue-50 border-blue-200';
     if (temp > 32) return 'bg-red-50 border-red-200';
     return 'bg-yellow-50 border-yellow-200';
@@ -235,7 +265,11 @@ export default function WeatherDashboard() {
   const renderChangeIndicator = (current, previous, unit) => {
     if (!previous) return null;
     
-    const diff = current - previous;
+    // Convert to numbers to ensure proper comparison
+    const curr = parseFloat(current);
+    const prev = parseFloat(previous);
+    const diff = curr - prev;
+    
     if (diff > 0) {
       return (
         <div className="flex items-center text-red-500">

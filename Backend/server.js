@@ -7,6 +7,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+let latestData={ timestamp: "2025-04-22T00:00:00", temperature: 22, humidity: 70 };
+
+
 // Sample historical data (can be updated later to push real-time entries)
 const sampleData = [
   { timestamp: "2025-04-22T00:00:00", temperature: 22, humidity: 70 },
@@ -41,6 +44,7 @@ app.get("/api/data", (req, res) => {
   const { temperature, humidity } = req.query;
   const timestamp = new Date().toISOString();
   const newEntry = { timestamp, temperature, humidity };
+  latestData={ timestamp, temperature, humidity };
   sampleData.push(newEntry);
   console.log("Received from ESP:", newEntry);
   res.status(200).send("Data received");
@@ -52,7 +56,7 @@ app.get("/api/alldata", (req, res) => {
 });
 
 // Provide latest data to frontend
-app.get('/data', (req, res) => {
+app.get('/api/latestdata', (req, res) => {
     res.json(latestData);
 });
 
